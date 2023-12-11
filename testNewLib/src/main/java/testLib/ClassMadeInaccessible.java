@@ -1,0 +1,4 @@
+package testLib;
+
+class ClassMadeInaccessible {
+}
