@@ -25,12 +25,12 @@ public class CheckTest {
 
     private void registerAll() {
         register("testMod/TestExtendFinalClass", Errors.CLASS_EXTENDS_FINAL);
-        register("testMod/TestExtendInterface", Errors.CLASS_EXTENDS_INTERFACE);
+        register("testMod/TestExtendInterface", Errors.CLASS_EXTENDS_INTERFACE, Errors.NON_INTERFACE_CALL_TO_INTERFACE_METHOD);
         register("testMod/TestExtendSealed", Errors.CLASS_EXTENDS_SEALED);
         register("testMod/TestExtendFinalMethod1", Errors.METHOD_OVERRIDES_FINAL);
         register("testMod/TestExtendFinalMethod2", Errors.METHOD_OVERRIDES_FINAL);
-        register("testMod/TestExtendsRemovedClassAndInterface", Errors.CLASS_EXTENDS_REMOVED, Errors.CLASS_IMPLEMENTS_REMOVED);
-        register("testMod/TestExtendsInaccessibleClassAndInterface", Errors.CLASS_EXTENDS_INACCESSIBLE, Errors.CLASS_IMPLEMENTS_INACCESSIBLE);
+        register("testMod/TestExtendsRemovedClassAndInterface", Errors.CLASS_EXTENDS_REMOVED, Errors.CLASS_IMPLEMENTS_REMOVED, Errors.CODE_REFERENCES_REMOVED_CLASS);
+        register("testMod/TestExtendsInaccessibleClassAndInterface", Errors.CLASS_EXTENDS_INACCESSIBLE, Errors.CLASS_IMPLEMENTS_INACCESSIBLE, Errors.CODE_REFERENCES_INACCESSIBLE_CLASS);
         register("testMod/TestImplementClass", Errors.CLASS_IMPLEMENTS_CLASS);
         register("testMod/TestImplementSealed", Errors.CLASS_IMPLEMENTS_SEALED);
         register("testMod/TestFieldRemovedType", Errors.FIELD_TYPE_REMOVED);
@@ -47,8 +47,8 @@ public class CheckTest {
         register("testMod/TestAbstractMethodImplementedViaSuperclass");
         register("testMod/TestAbstractMethodUnimplementedDespiteSuperclass", Errors.ABSTRACT_METHOD_UNIMPLEMENTED);
         register("testMod/TestInterfaceMethodResolvingToSuperclass", Errors.INCORRECT_INTERFACE_METHOD_LOOKUP);
-        register("testMod/TestStringParamChangedToObject");
-        register("testMod/TestObjectReturnTypeChangedToString");
+        register("testMod/TestStringParamChangedToObject", Errors.ACCESS_REMOVED_METHOD);
+        register("testMod/TestObjectReturnTypeChangedToString", Errors.ACCESS_REMOVED_METHOD);
     }
 
     @BeforeAll

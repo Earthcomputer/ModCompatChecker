@@ -46,7 +46,7 @@ public final class Index {
         }
 
         try {
-            Class<?> classpathCls = Class.forName(Type.getObjectType(name).getClassName());
+            Class<?> classpathCls = Class.forName(Type.getObjectType(name).getClassName(), false, ClassLoader.getPlatformClassLoader());
             if (classpathClassCache.size() >= 200) {
                 // periodically clear the cache to stop it getting out of hand
                 classpathClassCache.clear();

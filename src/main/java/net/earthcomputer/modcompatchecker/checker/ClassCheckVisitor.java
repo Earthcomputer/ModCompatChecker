@@ -15,6 +15,7 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public final class ClassCheckVisitor extends ClassVisitor {
@@ -112,9 +113,13 @@ public final class ClassCheckVisitor extends ClassVisitor {
 
         // remove the possibly unimplemented methods which are actually implemented and visible
         possiblyUnimplementedMethods.entrySet().removeIf(abstractMethod -> {
-            OwnedClassMember concreteMethod = AsmUtil.lookupMethod(index, className, abstractMethod.getKey().name(), abstractMethod.getKey().desc());
-            assert concreteMethod != null; // it shouldn't be null because we just found it in a parent class/interface
-            if (concreteMethod.member().access().isAbstract() || concreteMethod.member().access().isStatic()) {
+            List<OwnedClassMember> lookupResult = AsmUtil.multiLookupMethod(index, className, abstractMethod.getKey().name(), abstractMethod.getKey().desc());
+            List<OwnedClassMember> nonAbstractMethods = lookupResult.stream().filter(method -> !method.member().access().isAbstract()).toList();
+            if (nonAbstractMethods.size() != 1) {
+                return false;
+            }
+            OwnedClassMember concreteMethod = nonAbstractMethods.get(0);
+            if (concreteMethod.member().access().isStatic()) {
                 return false;
             }
             if (abstractMethod.getValue().access.accessLevel().isHigherVisibility(concreteMethod.member().access().accessLevel())) {
@@ -125,20 +130,28 @@ public final class ClassCheckVisitor extends ClassVisitor {
         });
 
         possiblyUnimplementedMethods.forEach((nameAndDesc, possiblyUnimplementedMethod) -> {
-            if (possiblyUnimplementedMethod.access.isAbstract()) {
+            List<OwnedClassMember> lookupResult = AsmUtil.multiLookupMethod(index, className, nameAndDesc.name(), nameAndDesc.desc());
+            List<OwnedClassMember> nonAbstractMethods = lookupResult.stream().filter(method -> !method.member().access().isAbstract()).toList();
+            if (nonAbstractMethods.size() > 1) {
+                problems.addProblem(className, Errors.DIAMOND_PROBLEM, nameAndDesc.name(), nameAndDesc.desc());
+            } else if (possiblyUnimplementedMethod.access.isAbstract()) {
                 problems.addProblem(className, Errors.ABSTRACT_METHOD_UNIMPLEMENTED, possiblyUnimplementedMethod.owner, nameAndDesc.name(), nameAndDesc.desc());
             } else {
-                OwnedClassMember concreteMethod = AsmUtil.lookupMethod(index, className, nameAndDesc.name(), nameAndDesc.desc());
-                assert concreteMethod != null;
                 String problematicAccessModifier;
-                if (concreteMethod.member().access().isStatic()) {
-                    problematicAccessModifier = "static";
-                } else if (concreteMethod.member().access().isAbstract()) {
+                String owner;
+                if (nonAbstractMethods.isEmpty()) {
                     problematicAccessModifier = "abstract";
+                    owner = lookupResult.get(0).owner();
                 } else {
-                    problematicAccessModifier = concreteMethod.member().access().accessLevel().getLowerName();
+                    OwnedClassMember concreteMethod = nonAbstractMethods.get(0);
+                    if (concreteMethod.member().access().isStatic()) {
+                        problematicAccessModifier = "static";
+                    } else {
+                        problematicAccessModifier = concreteMethod.member().access().accessLevel().getLowerName();
+                    }
+                    owner = concreteMethod.owner();
                 }
-                problems.addProblem(className, Errors.INCORRECT_INTERFACE_METHOD_LOOKUP, possiblyUnimplementedMethod.owner, nameAndDesc.name(), nameAndDesc.desc(), problematicAccessModifier, concreteMethod.owner());
+                problems.addProblem(className, Errors.INCORRECT_INTERFACE_METHOD_LOOKUP, possiblyUnimplementedMethod.owner, nameAndDesc.name(), nameAndDesc.desc(), problematicAccessModifier, owner);
             }
         });
     }

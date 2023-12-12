@@ -9,7 +9,7 @@ public final class ErrorCollectingProblemCollector implements ProblemCollector {
     private final EnumSet<Errors> problems = EnumSet.noneOf(Errors.class);
 
     @Override
-    public void addProblem(String className, Errors problem, Object... args) {
+    public void addProblem(String className, Errors problem, String... args) {
         problems.add(problem);
     }
 

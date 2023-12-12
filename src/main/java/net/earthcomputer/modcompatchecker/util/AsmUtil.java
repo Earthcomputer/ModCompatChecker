@@ -1,6 +1,5 @@
 package net.earthcomputer.modcompatchecker.util;
 
-import net.earthcomputer.modcompatchecker.indexer.ClassIndex;
 import net.earthcomputer.modcompatchecker.indexer.IResolvedClass;
 import net.earthcomputer.modcompatchecker.indexer.Index;
 import org.jetbrains.annotations.Nullable;
@@ -10,7 +9,7 @@ import org.objectweb.asm.Type;
 import java.lang.reflect.Field;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -20,6 +19,7 @@ public final class AsmUtil {
 
     public static final String OBJECT = "java/lang/Object";
     public static final String CONSTRUCTOR_NAME = "<init>";
+    public static final String CLASS_INITIALIZER_NAME = "<clinit>";
 
     private AsmUtil() {
     }
@@ -125,7 +125,14 @@ public final class AsmUtil {
 
     @Nullable
     public static OwnedClassMember lookupMethod(Index index, String owner, String name, String desc) {
+        List<OwnedClassMember> multiLookup = multiLookupMethod(index, owner, name, desc);
+        return multiLookup.isEmpty() ? null : multiLookup.get(0);
+    }
+
+    public static List<OwnedClassMember> multiLookupMethod(Index index, String owner, String name, String desc) {
         // JVMS 21 §5.4.3.3 method resolution, 1-3 (method lookup)
+        // JVMS 21 §5.4.3.4 interface method resolution, 1-6 (interface method lookup)
+        // the below algorithm implements §5.4.3.3 if `owner` is a class and §5.4.3.4 if `owner` is an interface.
 
         // search superclasses first
         String className = owner;
@@ -133,10 +140,10 @@ public final class AsmUtil {
             for (ClassMember method : resolvedClass.getMethods()) {
                 if (method.name().equals(name)) {
                     if (isSignaturePolymorphic(className, method.descriptor(), method.access())) {
-                        return new OwnedClassMember(owner, method);
+                        return List.of(new OwnedClassMember(owner, method));
                     }
                     if (method.descriptor().equals(desc)) {
-                        return new OwnedClassMember(owner, method);
+                        return List.of(new OwnedClassMember(owner, method));
                     }
                 }
             }
@@ -155,7 +162,7 @@ public final class AsmUtil {
         }
 
         if (maximallySpecificMethods.isEmpty()) {
-            return null;
+            return List.of();
         }
 
         // check if there is exactly one non-abstract maximally specific method
@@ -171,19 +178,11 @@ public final class AsmUtil {
             }
         }
         if (nonAbstractMethod != null) {
-            return nonAbstractMethod;
+            return List.of(nonAbstractMethod);
         }
 
-        // the spec says we can return an arbitrary method here, but we force an abstract method if possible so we trigger an abstract method error
-        for (var entry : maximallySpecificMethods.entrySet()) {
-            if (entry.getValue().access().isAbstract()) {
-                return new OwnedClassMember(entry.getKey(), entry.getValue());
-            }
-        }
-
-        // no abstract methods, so we return the first one we found
-        var entry = maximallySpecificMethods.entrySet().iterator().next();
-        return new OwnedClassMember(entry.getKey(), entry.getValue());
+        // the spec says we can return an arbitrary method here, we return all of them
+        return maximallySpecificMethods.entrySet().stream().map(entry -> new OwnedClassMember(entry.getKey(), entry.getValue())).toList();
     }
 
     private static void searchForMaximallySpecificMethods(Index index, String itf, IResolvedClass resolvedInterface, String name, String desc, Map<String, ClassMember> maximallySpecificMethods, Set<String> superinterfacesOfMaximallySpecificMethods) {
