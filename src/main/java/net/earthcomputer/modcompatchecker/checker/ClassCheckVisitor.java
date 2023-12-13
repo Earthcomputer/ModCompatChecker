@@ -174,7 +174,7 @@ public final class ClassCheckVisitor extends ClassVisitor {
         for (ClassMember method : clazz.getMethods()) {
             NameAndDesc nameAndDesc = new NameAndDesc(method.name(), method.descriptor());
             if (method.access().isAbstract()
-                || (clazz.getAccess().isInterface() && AsmUtil.isMemberAccessible(index, this.className, className, clazz, method.access().accessLevel()))) {
+                || (clazz.getAccess().isInterface() && !method.access().isStatic() && AsmUtil.isMemberAccessible(index, this.className, className, clazz, method.access().accessLevel()))) {
                 possiblyUnimplementedMethods.merge(nameAndDesc, new PossiblyUnimplementedMethod(className, method.access()), PossiblyUnimplementedMethod::maxVisibility);
             }
         }

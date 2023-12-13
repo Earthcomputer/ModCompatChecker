@@ -10,4 +10,9 @@ public final class PrintingProblemCollector implements ProblemCollector {
     public void addProblem(String className, String memberName, String memberDesc, Errors problem, String... args) {
         System.out.println(className + "." + memberName + " " + memberDesc + ": " + problem.getDescription().formatted((Object[]) args));
     }
+
+    @Override
+    public void addProblem(String className, String memberName, String memberDesc, int lineNumber, Errors problem, String... args) {
+        System.out.println(className + "." + memberName + " " + memberDesc + ": L" + lineNumber + ": " + problem.getDescription().formatted((Object[]) args));
+    }
 }

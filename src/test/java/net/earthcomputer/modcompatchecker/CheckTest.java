@@ -47,8 +47,45 @@ public class CheckTest {
         register("testMod/TestAbstractMethodImplementedViaSuperclass");
         register("testMod/TestAbstractMethodUnimplementedDespiteSuperclass", Errors.ABSTRACT_METHOD_UNIMPLEMENTED);
         register("testMod/TestInterfaceMethodResolvingToSuperclass", Errors.INCORRECT_INTERFACE_METHOD_LOOKUP);
+        register("testMod/TestNewRemoved", Errors.CODE_REFERENCES_REMOVED_CLASS);
+        register("testMod/TestNewInaccessible", Errors.CODE_REFERENCES_INACCESSIBLE_CLASS);
+        register("testMod/TestInstantiateAbstractClass", Errors.INSTANTIATING_ABSTRACT_CLASS);
+        register("testMod/TestInstantiateInterface", Errors.INSTANTIATING_INTERFACE, Errors.NON_INTERFACE_CALL_TO_INTERFACE_METHOD);
+        register("testMod/TestANewArrayRemoved", Errors.CODE_REFERENCES_REMOVED_CLASS);
+        register("testMod/TestANewArrayInaccessible", Errors.CODE_REFERENCES_INACCESSIBLE_CLASS);
+        register("testMod/TestCheckcastRemoved", Errors.CODE_REFERENCES_REMOVED_CLASS);
+        register("testMod/TestCheckcastInaccessible", Errors.CODE_REFERENCES_INACCESSIBLE_CLASS);
+        register("testMod/TestInstanceOfRemoved", Errors.CODE_REFERENCES_REMOVED_CLASS);
+        register("testMod/TestInstanceOfInaccessible", Errors.CODE_REFERENCES_INACCESSIBLE_CLASS);
+        register("testMod/TestMultiANewArrayRemoved", Errors.CODE_REFERENCES_REMOVED_CLASS);
+        register("testMod/TestMultiANewArrayInaccessible", Errors.CODE_REFERENCES_INACCESSIBLE_CLASS);
+        register("testMod/TestFieldRemovedClass", Errors.CODE_REFERENCES_REMOVED_CLASS);
+        register("testMod/TestFieldInaccessibleClass", Errors.CODE_REFERENCES_INACCESSIBLE_CLASS);
+        register("testMod/TestFieldRemoved", Errors.ACCESS_REMOVED_FIELD);
+        register("testMod/TestFieldInaccessible", Errors.ACCESS_INACCESSIBLE_FIELD);
+        register("testMod/TestFieldMadeStatic", Errors.NONSTATIC_ACCESS_TO_STATIC_FIELD);
+        register("testMod/TestFieldMadeNonStatic", Errors.STATIC_ACCESS_TO_NONSTATIC_FIELD);
+        register("testMod/TestFieldMadeFinal", Errors.WRITE_FINAL_FIELD);
+        register("testMod/TestOkayFinalWrites");
+        register("testMod/TestInvokeRemovedClass", Errors.CODE_REFERENCES_REMOVED_CLASS);
+        register("testMod/TestInvokeInaccessibleClass", Errors.CODE_REFERENCES_INACCESSIBLE_CLASS);
+        register("testMod/TestInvokeVirtualRemoved", Errors.ACCESS_REMOVED_METHOD);
+        register("testMod/TestInvokeVirtualInaccessible", Errors.ACCESS_INACCESSIBLE_METHOD);
+        register("testMod/TestInvokeVirtualInterface", Errors.NON_INTERFACE_CALL_TO_INTERFACE_METHOD);
+        register("testMod/TestInvokeSpecialRemoved", Errors.ACCESS_REMOVED_METHOD);
+        register("testMod/TestInvokeSpecialInaccessible", Errors.ACCESS_INACCESSIBLE_METHOD);
+        register("testMod/TestInvokeInterfaceRemoved", Errors.ACCESS_REMOVED_METHOD);
+        register("testMod/TestInvokeInterfaceInaccessible", Errors.ACCESS_INACCESSIBLE_METHOD);
+        register("testMod/TestInvokeInterfaceClass", Errors.INTERFACE_CALL_TO_NON_INTERFACE_METHOD);
+        register("testMod/TestInvokeStaticRemoved", Errors.ACCESS_REMOVED_METHOD);
+        register("testMod/TestInvokeStaticInaccessible", Errors.ACCESS_INACCESSIBLE_METHOD);
+        register("testMod/TestInvokeStaticMadeInterface", Errors.NON_INTERFACE_CALL_TO_INTERFACE_METHOD);
+        register("testMod/TestInvokeStaticMadeNonInterface", Errors.INTERFACE_CALL_TO_NON_INTERFACE_METHOD);
+        register("testMod/TestConstructorMovedToSuperclass", Errors.ACCESS_REMOVED_METHOD);
         register("testMod/TestStringParamChangedToObject", Errors.ACCESS_REMOVED_METHOD);
         register("testMod/TestObjectReturnTypeChangedToString", Errors.ACCESS_REMOVED_METHOD);
+        register("testMod/TestRemovedClassConstant", Errors.CODE_REFERENCES_REMOVED_CLASS);
+        register("testMod/TestInaccessibleClassConstant", Errors.CODE_REFERENCES_INACCESSIBLE_CLASS);
     }
 
     @BeforeAll
@@ -83,7 +120,7 @@ public class CheckTest {
                 }
                 ErrorCollectingProblemCollector problems = new ErrorCollectingProblemCollector();
                 Checker.checkClass(index, new DebugCheckerConfig(), modJar, entry, problems);
-                Assertions.assertEquals(expectedErrorsSet, problems.getProblems());
+                Assertions.assertEquals(expectedErrorsSet, problems.getProblems(), problems.getMessages().isEmpty() ? null : () -> String.join("\n", problems.getMessages()));
             }
         }));
     }

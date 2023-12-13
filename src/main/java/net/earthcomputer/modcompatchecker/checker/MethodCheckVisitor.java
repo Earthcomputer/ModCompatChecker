@@ -8,6 +8,7 @@ import net.earthcomputer.modcompatchecker.util.OwnedClassMember;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.ConstantDynamic;
 import org.objectweb.asm.Handle;
+import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -20,6 +21,7 @@ public final class MethodCheckVisitor extends MethodVisitor {
     private final String className;
     private final String methodName;
     private final String methodDesc;
+    private int lineNumber = 1;
 
     public MethodCheckVisitor(Index index, ProblemCollector problems, String className, String methodName, String methodDesc) {
         super(AsmUtil.API);
@@ -28,6 +30,11 @@ public final class MethodCheckVisitor extends MethodVisitor {
         this.className = className;
         this.methodName = methodName;
         this.methodDesc = methodDesc;
+    }
+
+    @Override
+    public void visitLineNumber(int line, Label start) {
+        lineNumber = line;
     }
 
     @Override
@@ -40,9 +47,9 @@ public final class MethodCheckVisitor extends MethodVisitor {
             IResolvedClass resolvedClass = index.findClass(type);
             if (resolvedClass != null) {
                 if (resolvedClass.getAccess().isInterface()) {
-                    problems.addProblem(className, methodName, methodDesc, Errors.INSTANTIATING_INTERFACE, type);
+                    problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.INSTANTIATING_INTERFACE, type);
                 } else if (resolvedClass.getAccess().isAbstract()) {
-                    problems.addProblem(className, methodName, methodDesc, Errors.INSTANTIATING_ABSTRACT_CLASS, type);
+                    problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.INSTANTIATING_ABSTRACT_CLASS, type);
                 }
             }
         }
@@ -61,25 +68,25 @@ public final class MethodCheckVisitor extends MethodVisitor {
 
         OwnedClassMember field = AsmUtil.lookupField(index, owner, name, descriptor);
         if (field == null) {
-            problems.addProblem(className, methodName, methodDesc, Errors.ACCESS_REMOVED_FIELD, owner, name, descriptor);
+            problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.ACCESS_REMOVED_FIELD, owner, name, descriptor);
         } else {
             if (!AsmUtil.isMemberAccessible(index, className, field.owner(), field.member().access().accessLevel())) {
-                problems.addProblem(className, methodName, methodDesc, Errors.ACCESS_INACCESSIBLE_FIELD, owner, name, descriptor, field.member().access().accessLevel().getLowerName());
+                problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.ACCESS_INACCESSIBLE_FIELD, owner, name, descriptor, field.member().access().accessLevel().getLowerName());
             }
             if (field.member().access().isStatic()) {
                 if (opcode == Opcodes.GETFIELD || opcode == Opcodes.PUTFIELD) {
-                    problems.addProblem(className, methodName, methodDesc, Errors.NONSTATIC_ACCESS_TO_STATIC_FIELD, owner, name, descriptor);
+                    problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.NONSTATIC_ACCESS_TO_STATIC_FIELD, owner, name, descriptor);
                 }
             } else {
                 if (opcode == Opcodes.GETSTATIC || opcode == Opcodes.PUTSTATIC) {
-                    problems.addProblem(className, methodName, methodDesc, Errors.STATIC_ACCESS_TO_NONSTATIC_FIELD, owner, name, descriptor);
+                    problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.STATIC_ACCESS_TO_NONSTATIC_FIELD, owner, name, descriptor);
                 }
             }
             if (field.member().access().isFinal()) {
                 if (opcode == Opcodes.PUTFIELD || opcode == Opcodes.PUTSTATIC) {
                     String expectedMethod = opcode == Opcodes.PUTFIELD ? AsmUtil.CONSTRUCTOR_NAME : AsmUtil.CLASS_INITIALIZER_NAME;
                     if (!field.owner().equals(className) || !expectedMethod.equals(methodName)) {
-                        problems.addProblem(className, methodName, methodDesc, Errors.WRITE_FINAL_FIELD, owner, name, descriptor);
+                        problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.WRITE_FINAL_FIELD, owner, name, descriptor);
                     }
                 }
             }
@@ -94,36 +101,36 @@ public final class MethodCheckVisitor extends MethodVisitor {
 
         IResolvedClass resolvedClass = index.findClass(owner);
         if (resolvedClass != null && resolvedClass.getAccess().isInterface() != isInterface) {
-            problems.addProblem(className, methodName, methodDesc, isInterface ? Errors.INTERFACE_CALL_TO_NON_INTERFACE_METHOD : Errors.NON_INTERFACE_CALL_TO_INTERFACE_METHOD, owner, name, descriptor);
+            problems.addProblem(className, methodName, methodDesc, lineNumber, isInterface ? Errors.INTERFACE_CALL_TO_NON_INTERFACE_METHOD : Errors.NON_INTERFACE_CALL_TO_INTERFACE_METHOD, owner, name, descriptor);
         }
 
         switch (opcode) {
             case Opcodes.INVOKEVIRTUAL -> {
                 OwnedClassMember method = AsmUtil.lookupMethod(index, owner, name, descriptor);
                 if (method == null) {
-                    problems.addProblem(className, methodName, methodDesc, Errors.ACCESS_REMOVED_METHOD, owner, name, descriptor);
+                    problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.ACCESS_REMOVED_METHOD, owner, name, descriptor);
                 } else {
                     if (!AsmUtil.isMemberAccessible(index, className, method.owner(), method.member().access().accessLevel())) {
-                        problems.addProblem(className, methodName, methodDesc, Errors.ACCESS_INACCESSIBLE_METHOD, owner, name, descriptor, method.member().access().accessLevel().getLowerName());
+                        problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.ACCESS_INACCESSIBLE_METHOD, owner, name, descriptor, method.member().access().accessLevel().getLowerName());
                     }
                     if (method.member().access().isStatic()) {
-                        problems.addProblem(className, methodName, methodDesc, Errors.NONSTATIC_CALL_TO_STATIC_METHOD, owner, name, descriptor);
+                        problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.NONSTATIC_CALL_TO_STATIC_METHOD, owner, name, descriptor);
                     }
                 }
             }
             case Opcodes.INVOKEINTERFACE -> {
                 OwnedClassMember method = AsmUtil.lookupMethod(index, owner, name, descriptor);
                 if (method == null) {
-                    problems.addProblem(className, methodName, methodDesc, Errors.ACCESS_REMOVED_METHOD, owner, name, descriptor);
+                    problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.ACCESS_REMOVED_METHOD, owner, name, descriptor);
                 } else {
                     AccessLevel accessLevel = method.member().access().accessLevel();
                     if (accessLevel == AccessLevel.PROTECTED || accessLevel == AccessLevel.PACKAGE) {
-                        problems.addProblem(className, methodName, methodDesc, Errors.INTERFACE_CALL_TO_PACKAGE_OR_PROTECTED, owner, name, descriptor, accessLevel.getLowerName());
+                        problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.INTERFACE_CALL_TO_PACKAGE_OR_PROTECTED, owner, name, descriptor, accessLevel.getLowerName());
                     } else if (!AsmUtil.isMemberAccessible(index, className, method.owner(), accessLevel)) {
-                        problems.addProblem(className, methodName, methodDesc, Errors.ACCESS_INACCESSIBLE_METHOD, owner, name, descriptor, accessLevel.getLowerName());
+                        problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.ACCESS_INACCESSIBLE_METHOD, owner, name, descriptor, accessLevel.getLowerName());
                     }
                     if (method.member().access().isStatic()) {
-                        problems.addProblem(className, methodName, methodDesc, Errors.NONSTATIC_CALL_TO_STATIC_METHOD, owner, name, descriptor);
+                        problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.NONSTATIC_CALL_TO_STATIC_METHOD, owner, name, descriptor);
                     }
                 }
             }
@@ -145,37 +152,41 @@ public final class MethodCheckVisitor extends MethodVisitor {
                 switch (nonAbstractMethods.size()) {
                     case 0 -> {
                         if (lookupResult.isEmpty()) {
-                            problems.addProblem(className, methodName, methodDesc, Errors.ACCESS_REMOVED_METHOD, owner, name, descriptor);
+                            problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.ACCESS_REMOVED_METHOD, owner, name, descriptor);
                         } else {
-                            problems.addProblem(className, methodName, methodDesc, Errors.INVOKESPECIAL_ABSTRACT_METHOD, owner, name, descriptor);
+                            problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.INVOKESPECIAL_ABSTRACT_METHOD, owner, name, descriptor);
                         }
                     }
                     case 1 -> {
                         OwnedClassMember method = nonAbstractMethods.get(0);
                         if (AsmUtil.CONSTRUCTOR_NAME.equals(name) && !method.owner().equals(owner)) {
-                            problems.addProblem(className, methodName, methodDesc, Errors.ACCESS_REMOVED_FIELD, owner, name, descriptor);
+                            if (resolvedClass == null || !resolvedClass.getAccess().isInterface()) {
+                                // if the resolved class is an interface, then we already gave an error about that
+                                // don't report a related error about the constructor being removed because it's an interface
+                                problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.ACCESS_REMOVED_METHOD, owner, name, descriptor);
+                            }
                         } else {
                             if (!AsmUtil.isMemberAccessible(index, className, method.owner(), method.member().access().accessLevel())) {
-                                problems.addProblem(className, methodName, methodDesc, Errors.ACCESS_INACCESSIBLE_METHOD, owner, name, descriptor, method.member().access().accessLevel().getLowerName());
+                                problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.ACCESS_INACCESSIBLE_METHOD, owner, name, descriptor, method.member().access().accessLevel().getLowerName());
                             }
                             if (method.member().access().isStatic()) {
-                                problems.addProblem(className, methodName, methodDesc, Errors.NONSTATIC_CALL_TO_STATIC_METHOD, owner, name, descriptor);
+                                problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.NONSTATIC_CALL_TO_STATIC_METHOD, owner, name, descriptor);
                             }
                         }
                     }
-                    default -> problems.addProblem(className, methodName, methodDesc, Errors.INVOKESPECIAL_DIAMOND_PROBLEM, owner, name, descriptor);
+                    default -> problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.INVOKESPECIAL_DIAMOND_PROBLEM, owner, name, descriptor);
                 }
             }
             case Opcodes.INVOKESTATIC -> {
                 OwnedClassMember method = AsmUtil.lookupMethod(index, owner, name, descriptor);
                 if (method == null) {
-                    problems.addProblem(className, methodName, methodDesc, Errors.ACCESS_REMOVED_METHOD, owner, name, descriptor);
+                    problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.ACCESS_REMOVED_METHOD, owner, name, descriptor);
                 } else {
                     if (!AsmUtil.isMemberAccessible(index, className, method.owner(), method.member().access().accessLevel())) {
-                        problems.addProblem(className, methodName, methodDesc, Errors.ACCESS_INACCESSIBLE_METHOD, owner, name, descriptor, method.member().access().accessLevel().getLowerName());
+                        problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.ACCESS_INACCESSIBLE_METHOD, owner, name, descriptor, method.member().access().accessLevel().getLowerName());
                     }
                     if (!method.member().access().isStatic()) {
-                        problems.addProblem(className, methodName, methodDesc, Errors.STATIC_CALL_TO_NONSTATIC_METHOD, owner, name, descriptor);
+                        problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.STATIC_CALL_TO_NONSTATIC_METHOD, owner, name, descriptor);
                     }
                 }
             }
@@ -206,10 +217,10 @@ public final class MethodCheckVisitor extends MethodVisitor {
         if (referredClass != null) {
             IResolvedClass resolvedClass = index.findClass(referredClass);
             if (resolvedClass == null) {
-                problems.addProblem(className, methodName, methodDesc, Errors.CODE_REFERENCES_REMOVED_CLASS, referredClass);
+                problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.CODE_REFERENCES_REMOVED_CLASS, referredClass);
                 return false;
             } else if (!AsmUtil.isClassAccessible(className, referredClass, resolvedClass.getAccess().accessLevel())) {
-                problems.addProblem(className, methodName, methodDesc, Errors.CODE_REFERENCES_INACCESSIBLE_CLASS, referredClass, resolvedClass.getAccess().accessLevel().getLowerName());
+                problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.CODE_REFERENCES_INACCESSIBLE_CLASS, referredClass, resolvedClass.getAccess().accessLevel().getLowerName());
                 return false;
             }
         }

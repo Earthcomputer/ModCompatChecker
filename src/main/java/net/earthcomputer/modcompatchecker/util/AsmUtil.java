@@ -140,10 +140,10 @@ public final class AsmUtil {
             for (ClassMember method : resolvedClass.getMethods()) {
                 if (method.name().equals(name)) {
                     if (isSignaturePolymorphic(className, method.descriptor(), method.access())) {
-                        return List.of(new OwnedClassMember(owner, method));
+                        return List.of(new OwnedClassMember(className, method));
                     }
                     if (method.descriptor().equals(desc)) {
-                        return List.of(new OwnedClassMember(owner, method));
+                        return List.of(new OwnedClassMember(className, method));
                     }
                 }
             }
