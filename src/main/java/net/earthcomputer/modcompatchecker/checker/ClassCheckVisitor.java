@@ -2,21 +2,16 @@ package net.earthcomputer.modcompatchecker.checker;
 
 import net.earthcomputer.modcompatchecker.indexer.IResolvedClass;
 import net.earthcomputer.modcompatchecker.indexer.Index;
-import net.earthcomputer.modcompatchecker.util.AccessFlags;
 import net.earthcomputer.modcompatchecker.util.AsmUtil;
 import net.earthcomputer.modcompatchecker.util.ClassMember;
-import net.earthcomputer.modcompatchecker.util.NameAndDesc;
-import net.earthcomputer.modcompatchecker.util.OwnedClassMember;
+import net.earthcomputer.modcompatchecker.util.InheritanceUtil;
+import net.earthcomputer.modcompatchecker.util.UnimplementedMethodChecker;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
-
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 
 public final class ClassCheckVisitor extends ClassVisitor {
     private final Index index;
@@ -44,7 +39,23 @@ public final class ClassCheckVisitor extends ClassVisitor {
         checkInterfaces(superName, interfaces);
 
         if ((access & Opcodes.ACC_ABSTRACT) == 0 && (access & Opcodes.ACC_INTERFACE) == 0) {
-            checkPossiblyUnimplementedMethods(interfaces);
+            UnimplementedMethodChecker checker = new UnimplementedMethodChecker.Simple(index, name, superName, interfaces) {
+                @Override
+                protected void onDiamondProblem(String methodName, String methodDesc) {
+                    problems.addProblem(className, Errors.DIAMOND_PROBLEM, methodName, methodDesc);
+                }
+
+                @Override
+                protected void onAbstractMethodUnimplemented(String methodOwner, String methodName, String methodDesc) {
+                    problems.addProblem(className, Errors.ABSTRACT_METHOD_UNIMPLEMENTED, methodOwner, methodName, methodDesc);
+                }
+
+                @Override
+                protected void onIncorrectInterfaceMethodLookup(String interfaceName, String methodName, String methodDesc, String resolvedClassName, String problematicAccessModifier) {
+                    problems.addProblem(className, Errors.INCORRECT_INTERFACE_METHOD_LOOKUP, interfaceName, methodName, methodDesc, problematicAccessModifier, resolvedClassName);
+                }
+            };
+            checker.run();
         }
     }
 
@@ -98,95 +109,6 @@ public final class ClassCheckVisitor extends ClassVisitor {
                         }
                     }
                 }
-            }
-        }
-    }
-
-    // Possibly unimplemented methods are all abstract methods from all superclasses and superinterfaces,
-    // and all other visible methods from superinterfaces.
-    // The latter case is because calls to interface methods can lookup to abstract, static or inaccessible methods in
-    // superclasses, even if the interface has a default implementation. See https://bugs.openjdk.org/browse/JDK-8021581
-    private void checkPossiblyUnimplementedMethods(String @Nullable [] interfaces) {
-        Map<NameAndDesc, PossiblyUnimplementedMethod> possiblyUnimplementedMethods = new LinkedHashMap<>();
-
-        searchParentsForPossiblyUnimplementedMethods(interfaces, possiblyUnimplementedMethods);
-
-        // remove the possibly unimplemented methods which are actually implemented and visible
-        possiblyUnimplementedMethods.entrySet().removeIf(abstractMethod -> {
-            List<OwnedClassMember> lookupResult = AsmUtil.multiLookupMethod(index, className, abstractMethod.getKey().name(), abstractMethod.getKey().desc());
-            List<OwnedClassMember> nonAbstractMethods = lookupResult.stream().filter(method -> !method.member().access().isAbstract()).toList();
-            if (nonAbstractMethods.size() != 1) {
-                return false;
-            }
-            OwnedClassMember concreteMethod = nonAbstractMethods.get(0);
-            if (concreteMethod.member().access().isStatic()) {
-                return false;
-            }
-            if (abstractMethod.getValue().access.accessLevel().isHigherVisibility(concreteMethod.member().access().accessLevel())) {
-                return false;
-            }
-            return AsmUtil.isMemberAccessible(index, className, concreteMethod.owner(), concreteMethod.member().access().accessLevel())
-                && AsmUtil.isMemberAccessible(index, abstractMethod.getValue().owner(), concreteMethod.owner(), concreteMethod.member().access().accessLevel());
-        });
-
-        possiblyUnimplementedMethods.forEach((nameAndDesc, possiblyUnimplementedMethod) -> {
-            List<OwnedClassMember> lookupResult = AsmUtil.multiLookupMethod(index, className, nameAndDesc.name(), nameAndDesc.desc());
-            List<OwnedClassMember> nonAbstractMethods = lookupResult.stream().filter(method -> !method.member().access().isAbstract()).toList();
-            if (nonAbstractMethods.size() > 1) {
-                problems.addProblem(className, Errors.DIAMOND_PROBLEM, nameAndDesc.name(), nameAndDesc.desc());
-            } else if (possiblyUnimplementedMethod.access.isAbstract()) {
-                problems.addProblem(className, Errors.ABSTRACT_METHOD_UNIMPLEMENTED, possiblyUnimplementedMethod.owner, nameAndDesc.name(), nameAndDesc.desc());
-            } else {
-                String problematicAccessModifier;
-                String owner;
-                if (nonAbstractMethods.isEmpty()) {
-                    problematicAccessModifier = "abstract";
-                    owner = lookupResult.get(0).owner();
-                } else {
-                    OwnedClassMember concreteMethod = nonAbstractMethods.get(0);
-                    if (concreteMethod.member().access().isStatic()) {
-                        problematicAccessModifier = "static";
-                    } else {
-                        problematicAccessModifier = concreteMethod.member().access().accessLevel().getLowerName();
-                    }
-                    owner = concreteMethod.owner();
-                }
-                problems.addProblem(className, Errors.INCORRECT_INTERFACE_METHOD_LOOKUP, possiblyUnimplementedMethod.owner, nameAndDesc.name(), nameAndDesc.desc(), problematicAccessModifier, owner);
-            }
-        });
-    }
-
-    private void searchParentsForPossiblyUnimplementedMethods(String @Nullable [] interfaces, Map<NameAndDesc, PossiblyUnimplementedMethod> possiblyUnimplementedMethods) {
-        if (superClass != null) {
-            searchClassAndParentsForPossiblyUnimplementedMethods(superName, superClass, possiblyUnimplementedMethods);
-        }
-        if (interfaces != null) {
-            for (String itf : interfaces) {
-                IResolvedClass resolvedClass = index.findClass(itf);
-                if (resolvedClass != null) {
-                    searchClassAndParentsForPossiblyUnimplementedMethods(itf, resolvedClass, possiblyUnimplementedMethods);
-                }
-            }
-        }
-    }
-
-    private void searchClassAndParentsForPossiblyUnimplementedMethods(String className, IResolvedClass clazz, Map<NameAndDesc, PossiblyUnimplementedMethod> possiblyUnimplementedMethods) {
-        for (ClassMember method : clazz.getMethods()) {
-            NameAndDesc nameAndDesc = new NameAndDesc(method.name(), method.descriptor());
-            if (method.access().isAbstract()
-                || (clazz.getAccess().isInterface() && !method.access().isStatic() && AsmUtil.isMemberAccessible(index, this.className, className, clazz, method.access().accessLevel()))) {
-                possiblyUnimplementedMethods.merge(nameAndDesc, new PossiblyUnimplementedMethod(className, method.access()), PossiblyUnimplementedMethod::maxVisibility);
-            }
-        }
-
-        IResolvedClass resolvedSuperClass = index.findClass(clazz.getSuperclass());
-        if (resolvedSuperClass != null) {
-            searchClassAndParentsForPossiblyUnimplementedMethods(clazz.getSuperclass(), resolvedSuperClass, possiblyUnimplementedMethods);
-        }
-        for (String itf : clazz.getInterfaces()) {
-            IResolvedClass resolvedInterface = index.findClass(itf);
-            if (resolvedInterface != null) {
-                searchClassAndParentsForPossiblyUnimplementedMethods(itf, resolvedInterface, possiblyUnimplementedMethods);
             }
         }
     }
@@ -273,7 +195,7 @@ public final class ClassCheckVisitor extends ClassVisitor {
                 if (!method.name().equals(name) || !method.descriptor().equals(descriptor)) {
                     continue;
                 }
-                if (AsmUtil.canOverride(className, superName, method.access())) {
+                if (InheritanceUtil.canOverride(className, superName, method.access())) {
                     if (method.access().isFinal()) {
                         problems.addProblem(className, name, descriptor, Errors.METHOD_OVERRIDES_FINAL);
                     } else {
@@ -282,12 +204,6 @@ public final class ClassCheckVisitor extends ClassVisitor {
                     return;
                 }
             }
-        }
-    }
-
-    private record PossiblyUnimplementedMethod(String owner, AccessFlags access) {
-        static PossiblyUnimplementedMethod maxVisibility(PossiblyUnimplementedMethod a, PossiblyUnimplementedMethod b) {
-            return b.access.accessLevel().isHigherVisibility(a.access().accessLevel()) ? b : a;
         }
     }
 }

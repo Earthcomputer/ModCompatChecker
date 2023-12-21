@@ -53,6 +53,7 @@ public final class AccessFlags {
             | Opcodes.ACC_FINAL
             | Opcodes.ACC_ABSTRACT
             | Opcodes.ACC_NATIVE
+            | Opcodes.ACC_INTERFACE
         ));
     }
 

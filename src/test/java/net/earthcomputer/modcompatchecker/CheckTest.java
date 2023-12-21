@@ -41,6 +41,8 @@ public class CheckTest {
         register("testMod/TestMethodWithInaccessibleParam", Errors.METHOD_PARAM_TYPE_INACCESSIBLE);
         register("testMod/TestThrowsRemoved", Errors.METHOD_THROWS_TYPE_REMOVED);
         register("testMod/TestThrowsInaccessible", Errors.METHOD_THROWS_TYPE_INACCESSIBLE);
+        register("testMod/TestDiamondProblem", Errors.DIAMOND_PROBLEM);
+        register("testMod/TestDiamondProblemOk");
         register("testMod/TestAbstractMethodUnimplemented", Errors.ABSTRACT_METHOD_UNIMPLEMENTED);
         register("testMod/TestIAbstractMethodUnimplemented", Errors.ABSTRACT_METHOD_UNIMPLEMENTED);
         register("testMod/TestAbstractMethodImplemented");
@@ -86,6 +88,16 @@ public class CheckTest {
         register("testMod/TestObjectReturnTypeChangedToString", Errors.ACCESS_REMOVED_METHOD);
         register("testMod/TestRemovedClassConstant", Errors.CODE_REFERENCES_REMOVED_CLASS);
         register("testMod/TestInaccessibleClassConstant", Errors.CODE_REFERENCES_INACCESSIBLE_CLASS);
+        register("testMod/TestLambdaRemovedFunctionalInterface", Errors.LAMBDA_INTERFACE_REMOVED);
+        register("testMod/TestLambdaInaccessibleFunctionalInterface", Errors.LAMBDA_INTERFACE_INACCESSIBLE);
+        register("testMod/TestLambdaFunctionalInterfaceMadeClass", Errors.LAMBDA_INTERFACE_NOT_AN_INTERFACE);
+        register("testMod/TestLambdaDiamondProblem", Errors.LAMBDA_DIAMOND_PROBLEM);
+        register("testMod/TestLambdaMethodRename", Errors.LAMBDA_ABSTRACT_METHOD_UNIMPLEMENTED);
+        register("testMod/TestAltLambdaRemovedFunctionalInterface", Errors.CODE_REFERENCES_REMOVED_CLASS, Errors.LAMBDA_INTERFACE_REMOVED);
+        register("testMod/TestAltLambdaInaccessibleFunctionalInterface", Errors.CODE_REFERENCES_INACCESSIBLE_CLASS, Errors.LAMBDA_INTERFACE_INACCESSIBLE);
+        register("testMod/TestAltLambdaFunctionalInterfaceMadeClass", Errors.LAMBDA_INTERFACE_NOT_AN_INTERFACE);
+        register("testMod/TestAltLambdaDiamondProblem", Errors.LAMBDA_DIAMOND_PROBLEM);
+        register("testMod/TestAltLambdaMethodRename", Errors.ACCESS_REMOVED_METHOD, Errors.LAMBDA_ABSTRACT_METHOD_UNIMPLEMENTED);
     }
 
     @BeforeAll

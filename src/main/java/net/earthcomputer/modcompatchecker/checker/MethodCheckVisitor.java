@@ -1,9 +1,12 @@
 package net.earthcomputer.modcompatchecker.checker;
 
+import net.earthcomputer.modcompatchecker.checker.indy.IndyChecker;
+import net.earthcomputer.modcompatchecker.checker.indy.IndyContext;
 import net.earthcomputer.modcompatchecker.indexer.IResolvedClass;
 import net.earthcomputer.modcompatchecker.indexer.Index;
 import net.earthcomputer.modcompatchecker.util.AccessLevel;
 import net.earthcomputer.modcompatchecker.util.AsmUtil;
+import net.earthcomputer.modcompatchecker.util.InheritanceUtil;
 import net.earthcomputer.modcompatchecker.util.OwnedClassMember;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.ConstantDynamic;
@@ -66,7 +69,11 @@ public final class MethodCheckVisitor extends MethodVisitor {
             return;
         }
 
-        OwnedClassMember field = AsmUtil.lookupField(index, owner, name, descriptor);
+        checkFieldAccess(FieldAccessType.fromOpcode(opcode), owner, name, descriptor);
+    }
+
+    private void checkFieldAccess(FieldAccessType accessType, String owner, String name, String descriptor) {
+        OwnedClassMember field = InheritanceUtil.lookupField(index, owner, name, descriptor);
         if (field == null) {
             problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.ACCESS_REMOVED_FIELD, owner, name, descriptor);
         } else {
@@ -74,17 +81,17 @@ public final class MethodCheckVisitor extends MethodVisitor {
                 problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.ACCESS_INACCESSIBLE_FIELD, owner, name, descriptor, field.member().access().accessLevel().getLowerName());
             }
             if (field.member().access().isStatic()) {
-                if (opcode == Opcodes.GETFIELD || opcode == Opcodes.PUTFIELD) {
+                if (!accessType.isStatic()) {
                     problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.NONSTATIC_ACCESS_TO_STATIC_FIELD, owner, name, descriptor);
                 }
             } else {
-                if (opcode == Opcodes.GETSTATIC || opcode == Opcodes.PUTSTATIC) {
+                if (accessType.isStatic()) {
                     problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.STATIC_ACCESS_TO_NONSTATIC_FIELD, owner, name, descriptor);
                 }
             }
             if (field.member().access().isFinal()) {
-                if (opcode == Opcodes.PUTFIELD || opcode == Opcodes.PUTSTATIC) {
-                    String expectedMethod = opcode == Opcodes.PUTFIELD ? AsmUtil.CONSTRUCTOR_NAME : AsmUtil.CLASS_INITIALIZER_NAME;
+                if (accessType.isWrite()) {
+                    String expectedMethod = accessType.isStatic() ? AsmUtil.CLASS_INITIALIZER_NAME : AsmUtil.CONSTRUCTOR_NAME;
                     if (!field.owner().equals(className) || !expectedMethod.equals(methodName)) {
                         problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.WRITE_FINAL_FIELD, owner, name, descriptor);
                     }
@@ -99,14 +106,18 @@ public final class MethodCheckVisitor extends MethodVisitor {
             return;
         }
 
+        checkMethodCall(MethodInvocationType.fromOpcode(opcode), owner, name, descriptor, isInterface);
+    }
+
+    private void checkMethodCall(MethodInvocationType invocationType, String owner, String name, String descriptor, boolean isInterface) {
         IResolvedClass resolvedClass = index.findClass(owner);
         if (resolvedClass != null && resolvedClass.getAccess().isInterface() != isInterface) {
             problems.addProblem(className, methodName, methodDesc, lineNumber, isInterface ? Errors.INTERFACE_CALL_TO_NON_INTERFACE_METHOD : Errors.NON_INTERFACE_CALL_TO_INTERFACE_METHOD, owner, name, descriptor);
         }
 
-        switch (opcode) {
-            case Opcodes.INVOKEVIRTUAL -> {
-                OwnedClassMember method = AsmUtil.lookupMethod(index, owner, name, descriptor);
+        switch (invocationType) {
+            case VIRTUAL -> {
+                OwnedClassMember method = InheritanceUtil.lookupMethod(index, owner, name, descriptor);
                 if (method == null) {
                     problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.ACCESS_REMOVED_METHOD, owner, name, descriptor);
                 } else {
@@ -118,8 +129,8 @@ public final class MethodCheckVisitor extends MethodVisitor {
                     }
                 }
             }
-            case Opcodes.INVOKEINTERFACE -> {
-                OwnedClassMember method = AsmUtil.lookupMethod(index, owner, name, descriptor);
+            case INTERFACE -> {
+                OwnedClassMember method = InheritanceUtil.lookupMethod(index, owner, name, descriptor);
                 if (method == null) {
                     problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.ACCESS_REMOVED_METHOD, owner, name, descriptor);
                 } else {
@@ -134,7 +145,7 @@ public final class MethodCheckVisitor extends MethodVisitor {
                     }
                 }
             }
-            case Opcodes.INVOKESPECIAL -> {
+            case SPECIAL -> {
                 // JVMS 21 §6.5.invokespecial
                 String effectiveOwner = owner;
                 if (!AsmUtil.CONSTRUCTOR_NAME.equals(name)) {
@@ -147,7 +158,7 @@ public final class MethodCheckVisitor extends MethodVisitor {
                     }
                 }
 
-                List<OwnedClassMember> lookupResult = AsmUtil.multiLookupMethod(index, effectiveOwner, name, descriptor);
+                List<OwnedClassMember> lookupResult = InheritanceUtil.multiLookupMethod(index, effectiveOwner, name, descriptor);
                 List<OwnedClassMember> nonAbstractMethods = lookupResult.stream().filter(method -> !method.member().access().isAbstract()).toList();
                 switch (nonAbstractMethods.size()) {
                     case 0 -> {
@@ -177,8 +188,8 @@ public final class MethodCheckVisitor extends MethodVisitor {
                     default -> problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.INVOKESPECIAL_DIAMOND_PROBLEM, owner, name, descriptor);
                 }
             }
-            case Opcodes.INVOKESTATIC -> {
-                OwnedClassMember method = AsmUtil.lookupMethod(index, owner, name, descriptor);
+            case STATIC -> {
+                OwnedClassMember method = InheritanceUtil.lookupMethod(index, owner, name, descriptor);
                 if (method == null) {
                     problems.addProblem(className, methodName, methodDesc, lineNumber, Errors.ACCESS_REMOVED_METHOD, owner, name, descriptor);
                 } else {
@@ -194,23 +205,55 @@ public final class MethodCheckVisitor extends MethodVisitor {
     }
 
     @Override
-    public void visitInvokeDynamicInsn(String name, String descriptor, Handle bootstrapMethodHandle, Object... bootstrapMethodArguments) {
-        // TODO
+    public void visitInvokeDynamicInsn(String name, String descriptor, Handle bsm, Object... args) {
+        checkConstant(bsm);
+
+        IndyChecker checker = IndyChecker.CHECKERS.get(bsm);
+        if (checker != null) {
+            checker.check(new IndyContext(index, problems, className, methodName, methodDesc, lineNumber, name, descriptor, bsm, args));
+        } else {
+            checkType(Type.getMethodType(descriptor));
+            for (Object arg : args) {
+                checkConstant(arg);
+            }
+        }
     }
 
     @Override
     public void visitLdcInsn(Object value) {
+        checkConstant(value);
+    }
+
+    private void checkConstant(Object value) {
         if (value instanceof Type classConstant) {
-            if (classConstant.getSort() == Type.METHOD) {
-                // TODO: MethodType
+            checkType(classConstant);
+        } else if (value instanceof Handle handle) {
+            if (handle.getTag() <= Opcodes.H_PUTSTATIC) {
+                checkFieldAccess(FieldAccessType.fromHandleReferenceKind(handle.getTag()), handle.getOwner(), handle.getName(), handle.getDesc());
             } else {
-                checkClassReference(AsmUtil.getReferredClass(classConstant));
+                checkMethodCall(MethodInvocationType.fromHandleReferenceKind(handle.getTag()), handle.getOwner(), handle.getName(), handle.getDesc(), handle.isInterface());
             }
-        } else if (value instanceof Handle Handle) {
-            // TODO
         } else if (value instanceof ConstantDynamic constantDynamic) {
-            // TODO
+            checkType(Type.getType(constantDynamic.getDescriptor()));
+            checkConstant(constantDynamic.getBootstrapMethod());
+            for (int i = 0; i < constantDynamic.getBootstrapMethodArgumentCount(); i++) {
+                checkConstant(constantDynamic.getBootstrapMethodArgument(i));
+            }
         }
+    }
+
+    private boolean checkType(Type type) {
+        if (type.getSort() == Type.METHOD) {
+            boolean result = true;
+            for (Type argumentType : type.getArgumentTypes()) {
+                if (!checkType(argumentType)) {
+                    result = false;
+                }
+            }
+            return checkType(type.getReturnType()) && result;
+        }
+
+        return checkClassReference(AsmUtil.getReferredClass(type));
     }
 
     private boolean checkClassReference(@Nullable String referredClass) {
@@ -226,5 +269,61 @@ public final class MethodCheckVisitor extends MethodVisitor {
         }
 
         return true;
+    }
+
+    private enum FieldAccessType {
+        GETFIELD, GETSTATIC, PUTFIELD, PUTSTATIC;
+
+        boolean isStatic() {
+            return this == GETSTATIC || this == PUTSTATIC;
+        }
+
+        boolean isWrite() {
+            return this == PUTFIELD || this == PUTSTATIC;
+        }
+
+        static FieldAccessType fromOpcode(int opcode) {
+            return switch (opcode) {
+                case Opcodes.GETFIELD -> GETFIELD;
+                case Opcodes.GETSTATIC -> GETSTATIC;
+                case Opcodes.PUTFIELD -> PUTFIELD;
+                case Opcodes.PUTSTATIC -> PUTSTATIC;
+                default -> throw new IllegalArgumentException("Invalid field access opcode " + opcode);
+            };
+        }
+
+        static FieldAccessType fromHandleReferenceKind(int tag) {
+            return switch (tag) {
+                case Opcodes.H_GETFIELD -> GETFIELD;
+                case Opcodes.H_GETSTATIC -> GETSTATIC;
+                case Opcodes.H_PUTFIELD -> PUTFIELD;
+                case Opcodes.H_PUTSTATIC -> PUTSTATIC;
+                default -> throw new IllegalArgumentException("Invalid field access handle reference kind " + tag);
+            };
+        }
+    }
+
+    private enum MethodInvocationType {
+        VIRTUAL, STATIC, SPECIAL, INTERFACE;
+
+        static MethodInvocationType fromOpcode(int opcode) {
+            return switch (opcode) {
+                case Opcodes.INVOKEVIRTUAL -> VIRTUAL;
+                case Opcodes.INVOKESTATIC -> STATIC;
+                case Opcodes.INVOKESPECIAL -> SPECIAL;
+                case Opcodes.INVOKEINTERFACE -> INTERFACE;
+                default -> throw new IllegalArgumentException("Invalid method invocation opcode " + opcode);
+            };
+        }
+
+        static MethodInvocationType fromHandleReferenceKind(int tag) {
+            return switch (tag) {
+                case Opcodes.H_INVOKEVIRTUAL -> VIRTUAL;
+                case Opcodes.H_INVOKESTATIC -> STATIC;
+                case Opcodes.H_INVOKESPECIAL, Opcodes.H_NEWINVOKESPECIAL -> SPECIAL;
+                case Opcodes.H_INVOKEINTERFACE -> INTERFACE;
+                default -> throw new IllegalArgumentException("Invalid method invocation handle reference kind " + tag);
+            };
+        }
     }
 }

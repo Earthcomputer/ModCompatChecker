@@ -40,6 +40,12 @@ public enum Errors {
     INVOKESPECIAL_DIAMOND_PROBLEM("Code invokes method %s.%s %s, which has multiple implementations from different interfaces"),
     INSTANTIATING_ABSTRACT_CLASS("Code instantiates abstract class %s"),
     INSTANTIATING_INTERFACE("Code instantiates interface %s"),
+    LAMBDA_INTERFACE_REMOVED("Lambda implements interface %s which is removed"),
+    LAMBDA_INTERFACE_INACCESSIBLE("Lambda implements interface %s which is inaccessible with %s visibility"),
+    LAMBDA_INTERFACE_NOT_AN_INTERFACE("Lambda implements %s which is not an interface"),
+    LAMBDA_DIAMOND_PROBLEM("Lambda inherits multiple non-abstract implementations of method %s %s from different interfaces"),
+    LAMBDA_ABSTRACT_METHOD_UNIMPLEMENTED("Lambda does not implement the abstract method %s.%s %s"),
+    LAMBDA_INCORRECT_INTERFACE_METHOD_LOOKUP("Lambda does not override the interface method %s.%s %s, resulting in it resolving to the %s method in %s"),
     ;
 
     private final String description;
