@@ -13,6 +13,7 @@ public final class AsmUtil {
     public static final int API = getAsmApi();
 
     public static final String OBJECT = "java/lang/Object";
+    public static final String ENUM = "java/lang/Enum";
     public static final String CONSTRUCTOR_NAME = "<init>";
     public static final String CLASS_INITIALIZER_NAME = "<clinit>";
 

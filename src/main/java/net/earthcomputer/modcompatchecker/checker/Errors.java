@@ -46,6 +46,8 @@ public enum Errors {
     LAMBDA_DIAMOND_PROBLEM("Lambda inherits multiple non-abstract implementations of method %s %s from different interfaces"),
     LAMBDA_ABSTRACT_METHOD_UNIMPLEMENTED("Lambda does not implement the abstract method %s.%s %s"),
     LAMBDA_INCORRECT_INTERFACE_METHOD_LOOKUP("Lambda does not override the interface method %s.%s %s, resulting in it resolving to the %s method in %s"),
+    ENUM_SWITCH_ON_NON_ENUM("Enum switch on non-enum class %s"),
+    ENUM_SWITCH_REMOVED_ENUM_CONSTANT("Enum switch references removed enum constant %s.%s"),
     ;
 
     private final String description;

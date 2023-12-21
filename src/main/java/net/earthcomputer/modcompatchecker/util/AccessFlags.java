@@ -40,6 +40,10 @@ public final class AccessFlags {
         return (flags & Opcodes.ACC_INTERFACE) != 0;
     }
 
+    public boolean isEnum() {
+        return (flags & Opcodes.ACC_ENUM) != 0;
+    }
+
     public int toAsm() {
         return flags;
     }
@@ -75,6 +79,7 @@ public final class AccessFlags {
                 case "native" -> flags |= Opcodes.ACC_NATIVE;
                 case "varargs" -> flags |= Opcodes.ACC_VARARGS;
                 case "interface" -> flags |= Opcodes.ACC_INTERFACE;
+                case "enum" -> flags |= Opcodes.ACC_ENUM;
                 default -> {
                     return null;
                 }
@@ -103,6 +108,9 @@ public final class AccessFlags {
         }
         if (isInterface()) {
             sb.append("-interface");
+        }
+        if (isEnum()) {
+            sb.append("-enum");
         }
         return sb.toString();
     }

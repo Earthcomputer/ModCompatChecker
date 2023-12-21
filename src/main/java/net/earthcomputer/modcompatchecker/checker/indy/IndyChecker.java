@@ -25,6 +25,13 @@ public interface IndyChecker {
             "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;[Ljava/lang/Object;)Ljava/lang/invoke/CallSite;",
             false
         ), LambdaMetafactoryChecker.INSTANCE);
+        map.put(new Handle(
+            Opcodes.H_INVOKESTATIC,
+            "java/lang/runtime/SwitchBootstraps",
+            "enumSwitch",
+            "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;[Ljava/lang/Object;)Ljava/lang/invoke/CallSite;",
+            false
+        ), EnumSwitchChecker.INSTANCE);
 
         return map;
     }).get();

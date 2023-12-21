@@ -48,7 +48,11 @@ public final class ClasspathClass implements IResolvedClass {
         if (access != null) {
             return access;
         }
-        return access = AccessFlags.fromReflectionModifiers(clazz.getModifiers());
+        int flags = AccessFlags.fromReflectionModifiers(clazz.getModifiers()).toAsm();
+        if (Enum.class.isAssignableFrom(clazz)) { // this differs from Class.isEnum for classes for specialized enum constants
+            flags |= Opcodes.ACC_ENUM;
+        }
+        return access = new AccessFlags(flags);
     }
 
     @Override
@@ -89,7 +93,11 @@ public final class ClasspathClass implements IResolvedClass {
     }
 
     private static ClassMember fieldToMember(Field field) {
-        return new ClassMember(AccessFlags.fromReflectionModifiers(field.getModifiers()), field.getName(), Type.getDescriptor(field.getType()));
+        int flags = AccessFlags.fromReflectionModifiers(field.getModifiers()).toAsm();
+        if (field.isEnumConstant()) {
+            flags |= Opcodes.ACC_ENUM;
+        }
+        return new ClassMember(new AccessFlags(flags), field.getName(), Type.getDescriptor(field.getType()));
     }
 
     @Override
