@@ -43,6 +43,7 @@ public enum EnumSwitchChecker implements IndyChecker {
                     context.addProblem(Errors.CODE_REFERENCES_INACCESSIBLE_CLASS, className, resolvedClass.getAccess().accessLevel().getLowerName());
                 }
             } else if (label instanceof String enumConstant) {
+                // TODO: is this check correct?
                 if (resolvedEnum.getFields().stream().noneMatch(field -> field.access().isEnum() && field.name().equals(enumConstant))) {
                     context.addProblem(Errors.ENUM_SWITCH_REMOVED_ENUM_CONSTANT, enumClass, enumConstant);
                 }
