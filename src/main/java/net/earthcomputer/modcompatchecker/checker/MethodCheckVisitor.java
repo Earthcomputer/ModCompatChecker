@@ -248,11 +248,14 @@ public final class MethodCheckVisitor extends MethodVisitor {
             Object[] condyArgs = new Object[constantDynamic.getBootstrapMethodArgumentCount()];
             Arrays.setAll(condyArgs, constantDynamic::getBootstrapMethodArgument);
             checker.check(new IndyContext(index, problems, className, methodName, methodDesc, lineNumber, constantDynamic.getName(), constantDynamic.getDescriptor(), constantDynamic.getBootstrapMethod(), condyArgs));
-        } else {
-            checkType(Type.getType(constantDynamic.getDescriptor()));
-            for (int i = 0; i < constantDynamic.getBootstrapMethodArgumentCount(); i++) {
-                checkConstant(constantDynamic.getBootstrapMethodArgument(i));
+            if (checker.overrideDefaultChecking()) {
+                return;
             }
+        }
+
+        checkType(Type.getType(constantDynamic.getDescriptor()));
+        for (int i = 0; i < constantDynamic.getBootstrapMethodArgumentCount(); i++) {
+            checkConstant(constantDynamic.getBootstrapMethodArgument(i));
         }
     }
 

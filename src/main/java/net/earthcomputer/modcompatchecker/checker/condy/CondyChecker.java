@@ -47,9 +47,20 @@ public interface CondyChecker {
             "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)Ljava/lang/invoke/VarHandle;",
             false
         ), FieldCondyChecker.INSTANCE);
+        map.put(new Handle(
+            Opcodes.H_INVOKESTATIC,
+            "java/lang/invoke/ConstantBootstraps",
+            "invoke",
+            "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/Class;Ljava/lang/invoke/MethodHandle;[Ljava/lang/Object;)Ljava/lang/Object;",
+            false
+        ), CondyInvokeChecker.INSTANCE);
 
         return map;
     }).get();
 
     void check(IndyContext context);
+
+    default boolean overrideDefaultChecking() {
+        return true;
+    }
 }
