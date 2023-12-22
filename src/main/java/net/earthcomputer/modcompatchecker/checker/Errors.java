@@ -48,6 +48,8 @@ public enum Errors {
     LAMBDA_INCORRECT_INTERFACE_METHOD_LOOKUP("Lambda does not override the interface method %s.%s %s, resulting in it resolving to the %s method in %s"),
     ENUM_SWITCH_ON_NON_ENUM("Enum switch on non-enum class %s"),
     ENUM_SWITCH_REMOVED_ENUM_CONSTANT("Enum switch references removed enum constant %s.%s"),
+    ENUM_CONSTANT_NOT_AN_ENUM_CONSTANT("Code references non-enum-constant %s.%s as if it were an enum constant"),
+    STATIC_FINAL_FIELD_NOT_FINAL("Code attempts to retrieve value of static final field %s.%s : %s but it is not final"),
     ;
 
     private final String description;

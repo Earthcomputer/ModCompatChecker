@@ -3,6 +3,7 @@ package net.earthcomputer.modcompatchecker.util;
 import net.earthcomputer.modcompatchecker.indexer.IResolvedClass;
 import net.earthcomputer.modcompatchecker.indexer.Index;
 import org.jetbrains.annotations.Nullable;
+import org.objectweb.asm.ConstantDynamic;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
@@ -104,5 +105,22 @@ public final class AsmUtil {
             type = type.getElementType();
         }
         return type.getSort() == Type.OBJECT ? type.getInternalName() : null;
+    }
+
+    @Nullable
+    public static Type toClassConstant(Object constant) {
+        if (constant instanceof Type type) {
+            return type.getSort() == Type.METHOD ? null : type;
+        } else if (constant instanceof ConstantDynamic condy) {
+            if ("java/lang/invoke/ConstantBootstraps".equals(condy.getBootstrapMethod().getOwner())
+                && "primitiveClass".equals(condy.getBootstrapMethod().getName())
+                && "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/Class;".equals(condy.getBootstrapMethod().getDesc())
+            ) {
+                return Type.getType(condy.getName());
+            }
+            return null;
+        } else {
+            return null;
+        }
     }
 }

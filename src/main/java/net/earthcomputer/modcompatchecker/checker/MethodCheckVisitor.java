@@ -1,5 +1,6 @@
 package net.earthcomputer.modcompatchecker.checker;
 
+import net.earthcomputer.modcompatchecker.checker.condy.CondyChecker;
 import net.earthcomputer.modcompatchecker.checker.indy.IndyChecker;
 import net.earthcomputer.modcompatchecker.checker.indy.IndyContext;
 import net.earthcomputer.modcompatchecker.indexer.IResolvedClass;
@@ -16,6 +17,7 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
+import java.util.Arrays;
 import java.util.List;
 
 public final class MethodCheckVisitor extends MethodVisitor {
@@ -234,8 +236,20 @@ public final class MethodCheckVisitor extends MethodVisitor {
                 checkMethodCall(MethodInvocationType.fromHandleReferenceKind(handle.getTag()), handle.getOwner(), handle.getName(), handle.getDesc(), handle.isInterface());
             }
         } else if (value instanceof ConstantDynamic constantDynamic) {
+            checkConstantDynamic(constantDynamic);
+        }
+    }
+
+    private void checkConstantDynamic(ConstantDynamic constantDynamic) {
+        checkConstant(constantDynamic.getBootstrapMethod());
+
+        CondyChecker checker = CondyChecker.CHECKERS.get(constantDynamic.getBootstrapMethod());
+        if (checker != null) {
+            Object[] condyArgs = new Object[constantDynamic.getBootstrapMethodArgumentCount()];
+            Arrays.setAll(condyArgs, constantDynamic::getBootstrapMethodArgument);
+            checker.check(new IndyContext(index, problems, className, methodName, methodDesc, lineNumber, constantDynamic.getName(), constantDynamic.getDescriptor(), constantDynamic.getBootstrapMethod(), condyArgs));
+        } else {
             checkType(Type.getType(constantDynamic.getDescriptor()));
-            checkConstant(constantDynamic.getBootstrapMethod());
             for (int i = 0; i < constantDynamic.getBootstrapMethodArgumentCount(); i++) {
                 checkConstant(constantDynamic.getBootstrapMethodArgument(i));
             }

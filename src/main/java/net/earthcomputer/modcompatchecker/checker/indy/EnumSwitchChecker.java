@@ -33,7 +33,8 @@ public enum EnumSwitchChecker implements IndyChecker {
         }
 
         for (Object label : context.args()) {
-            if (label instanceof Type type && (type.getSort() == Type.OBJECT || type.getSort() == Type.ARRAY)) {
+            Type type = AsmUtil.toClassConstant(label);
+            if (type != null && type.getSort() == Type.OBJECT) {
                 String className = type.getInternalName();
                 IResolvedClass resolvedClass = context.index().findClass(className);
                 if (resolvedClass == null) {
