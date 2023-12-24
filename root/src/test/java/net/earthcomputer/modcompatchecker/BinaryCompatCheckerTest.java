@@ -1,7 +1,6 @@
 package net.earthcomputer.modcompatchecker;
 
 import net.earthcomputer.modcompatchecker.checker.BinaryCompatChecker;
-import net.earthcomputer.modcompatchecker.checker.Checker;
 import net.earthcomputer.modcompatchecker.checker.Errors;
 import net.earthcomputer.modcompatchecker.config.PluginLoader;
 import net.earthcomputer.modcompatchecker.indexer.Index;

@@ -65,6 +65,7 @@ public interface Plugin {
         final Set<String> after = new HashSet<>();
 
         private Ordering(Order order) {
+
             this.order = order;
         }
 
