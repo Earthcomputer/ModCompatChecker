@@ -1,7 +1,9 @@
 package net.earthcomputer.modcompatchecker;
 
+import net.earthcomputer.modcompatchecker.checker.BinaryCompatChecker;
 import net.earthcomputer.modcompatchecker.checker.Checker;
 import net.earthcomputer.modcompatchecker.checker.Errors;
+import net.earthcomputer.modcompatchecker.config.PluginLoader;
 import net.earthcomputer.modcompatchecker.indexer.Index;
 import net.earthcomputer.modcompatchecker.indexer.Indexer;
 import org.junit.jupiter.api.AfterAll;
@@ -19,7 +21,7 @@ import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
-public class CheckTest {
+public class BinaryCompatCheckerTest {
     private static Index index;
     private final List<DynamicTest> tests = new ArrayList<>();
 
@@ -102,6 +104,8 @@ public class CheckTest {
 
     @BeforeAll
     public static void createIndex() throws IOException {
+        PluginLoader.setTestingPlugins(PluginLoader.createBuiltinPlugins());
+
         index = new Index();
         Path libPath = Path.of(System.getProperty("testNewLib.jar"));
         Indexer.indexJar(libPath, index);
@@ -112,6 +116,7 @@ public class CheckTest {
     @AfterAll
     public static void destroyIndex() {
         index = null;
+        PluginLoader.setTestingPlugins(null);
     }
 
     @TestFactory
@@ -131,7 +136,7 @@ public class CheckTest {
                     throw new IOException("Class " + className + " not found in mod jar");
                 }
                 ErrorCollectingProblemCollector problems = new ErrorCollectingProblemCollector();
-                Checker.checkClass(index, new DebugCheckerConfig(), modJar, entry, problems);
+                BinaryCompatChecker.checkClass(index, new DebugCheckerConfig(), modJar, entry, problems);
                 Assertions.assertEquals(expectedErrorsSet, problems.getProblems(), problems.getMessages().isEmpty() ? null : () -> String.join("\n", problems.getMessages()));
             }
         }));

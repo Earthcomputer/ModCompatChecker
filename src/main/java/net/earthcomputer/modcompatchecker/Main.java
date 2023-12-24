@@ -6,7 +6,6 @@ import joptsimple.OptionSet;
 import joptsimple.util.PathConverter;
 import joptsimple.util.PathProperties;
 import net.earthcomputer.modcompatchecker.checker.Checker;
-import net.earthcomputer.modcompatchecker.checker.CheckerConfig;
 import net.earthcomputer.modcompatchecker.checker.PrintingProblemCollector;
 import net.earthcomputer.modcompatchecker.config.Config;
 import net.earthcomputer.modcompatchecker.config.ConfigLoader;
@@ -152,7 +151,7 @@ public final class Main {
         }
 
         try {
-            Checker.check(index, new CheckerConfig(config), modPaths, new PrintingProblemCollector());
+            Checker.check(index, config, modPaths, new PrintingProblemCollector());
         } catch (IOException e) {
             System.err.println("Error checking mod jars: " + e);
         }

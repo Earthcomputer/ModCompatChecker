@@ -1,5 +1,6 @@
 package net.earthcomputer.modcompatchecker.config;
 
+import net.earthcomputer.modcompatchecker.checker.ProblemCollector;
 import net.earthcomputer.modcompatchecker.indexer.ClassIndex;
 import net.earthcomputer.modcompatchecker.indexer.Index;
 import net.earthcomputer.modcompatchecker.util.ClassMember;
@@ -10,7 +11,11 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.jar.JarFile;
 
 public interface Plugin {
     String id();
@@ -49,6 +54,9 @@ public interface Plugin {
     @Nullable
     default ClassMember onIndexMethod(ClassIndex clazz, ClassMember method) {
         return method;
+    }
+
+    default void check(Index index, Config config, Path modPath, JarFile modJar, ProblemCollector problems, List<CompletableFuture<Void>> futures, Executor executor) throws IOException {
     }
 
     final class Ordering {

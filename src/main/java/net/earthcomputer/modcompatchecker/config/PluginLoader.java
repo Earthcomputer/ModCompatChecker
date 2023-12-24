@@ -1,5 +1,8 @@
 package net.earthcomputer.modcompatchecker.config;
 
+import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.VisibleForTesting;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -12,17 +15,42 @@ import java.util.stream.Collectors;
 
 public final class PluginLoader {
     private static final List<Plugin> PLUGINS = loadPlugins();
+    @Nullable
+    private static List<Plugin> testingPlugins = null;
 
     private PluginLoader() {
     }
 
     public static List<Plugin> plugins() {
-        return PLUGINS;
+        return testingPlugins != null ? testingPlugins : PLUGINS;
+    }
+
+    @VisibleForTesting
+    public static void setTestingPlugins(@Nullable List<Plugin> plugins) {
+        if (plugins == null) {
+            testingPlugins = null;
+        } else {
+            testingPlugins = sortPlugins(plugins);
+        }
+    }
+
+    @VisibleForTesting
+    public static List<Plugin> createBuiltinPlugins() {
+        return ServiceLoader.load(Plugin.class).stream().filter(provider -> provider.type().isAnnotationPresent(BuiltinPlugin.class)).map(provider -> {
+            try {
+                return (Plugin) provider.type().getConstructor().newInstance();
+            } catch (ReflectiveOperationException e) {
+                throw new AssertionError("Could not instantiate built-in plugin", e);
+            }
+        }).collect(Collectors.toCollection(ArrayList::new));
     }
 
     private static List<Plugin> loadPlugins() {
-        List<PluginCandidate> plugins = ServiceLoader.load(Plugin.class).stream().map(provider -> {
-            Plugin plugin = provider.get();
+        return sortPlugins(ServiceLoader.load(Plugin.class).stream().map(ServiceLoader.Provider::get).toList());
+    }
+
+    private static List<Plugin> sortPlugins(List<Plugin> pluginList) {
+        List<PluginCandidate> plugins = pluginList.stream().map(plugin -> {
             Plugin.Ordering order = plugin.order();
             return new PluginCandidate(plugin.id(), order, plugin, new HashSet<>(order.after));
         }).collect(Collectors.toCollection(ArrayList::new));
