@@ -10,6 +10,8 @@ import net.earthcomputer.modcompatchecker.checker.CheckerConfig;
 import net.earthcomputer.modcompatchecker.checker.PrintingProblemCollector;
 import net.earthcomputer.modcompatchecker.config.Config;
 import net.earthcomputer.modcompatchecker.config.ConfigLoader;
+import net.earthcomputer.modcompatchecker.config.Plugin;
+import net.earthcomputer.modcompatchecker.config.PluginLoader;
 import net.earthcomputer.modcompatchecker.indexer.Index;
 import net.earthcomputer.modcompatchecker.indexer.Indexer;
 
@@ -57,6 +59,8 @@ public final class Main {
             config = Config.empty();
         }
 
+        PluginLoader.plugins().forEach(Plugin::initialize);
+
         if (options.has(indexOption)) {
             indexJar(indexOption.value(options), outputOption.value(options));
             return;
@@ -78,6 +82,9 @@ public final class Main {
     private static void indexJar(Path jarPath, Path outputPath) {
         Index index = new Index();
         try {
+            for (Plugin plugin : PluginLoader.plugins()) {
+                plugin.preIndexLibrary(index, jarPath);
+            }
             Indexer.indexJar(jarPath, index);
         } catch (IOException e) {
             System.err.println("Failed to index jar: " + e);
@@ -96,6 +103,29 @@ public final class Main {
 
     private static void checkMods(List<Path> modPaths, List<Path> libraryPaths, Config config) {
         Index index = new Index();
+
+        for (Path libraryPath : libraryPaths) {
+            if (libraryPath.toString().endsWith(".jar")) {
+                for (Plugin plugin : PluginLoader.plugins()) {
+                    try {
+                        plugin.preIndexLibrary(index, libraryPath);
+                    } catch (IOException e) {
+                        System.err.println("Failed to index library: " + e);
+                        return;
+                    }
+                }
+            }
+        }
+        for (Path modPath : modPaths) {
+            for (Plugin plugin : PluginLoader.plugins()) {
+                try {
+                    plugin.preIndexMod(index, modPath);
+                } catch (IOException e) {
+                    System.err.println("Failed to index mod jar: " + e);
+                    return;
+                }
+            }
+        }
 
         for (Path libraryPath : libraryPaths) {
             try {

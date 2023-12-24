@@ -1,5 +1,7 @@
 package net.earthcomputer.modcompatchecker.indexer;
 
+import net.earthcomputer.modcompatchecker.config.Plugin;
+import net.earthcomputer.modcompatchecker.config.PluginLoader;
 import net.earthcomputer.modcompatchecker.util.AccessFlags;
 import net.earthcomputer.modcompatchecker.util.ClassMember;
 import org.jetbrains.annotations.Nullable;
@@ -13,7 +15,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 public final class ClassIndex implements IResolvedClass {
-    private final AccessFlags access;
+    private AccessFlags access;
     private final String superclass;
     private final List<String> interfaces;
     private final Set<ClassMember> fields = new TreeSet<>();
@@ -34,6 +36,10 @@ public final class ClassIndex implements IResolvedClass {
         return access;
     }
 
+    public void setAccess(AccessFlags access) {
+        this.access = access;
+    }
+
     @Override
     public String getSuperclass() {
         return superclass;
@@ -45,11 +51,25 @@ public final class ClassIndex implements IResolvedClass {
     }
 
     public void addField(AccessFlags access, String name, String descriptor) {
-        fields.add(new ClassMember(access, name, descriptor));
+        ClassMember field = new ClassMember(access, name, descriptor);
+        for (Plugin plugin : PluginLoader.plugins()) {
+            field = plugin.onIndexField(this, field);
+            if (field == null) {
+                return;
+            }
+        }
+        fields.add(field);
     }
 
     public void addMethod(AccessFlags access, String name, String descriptor) {
-        methods.add(new ClassMember(access, name, descriptor));
+        ClassMember method = new ClassMember(access, name, descriptor);
+        for (Plugin plugin : PluginLoader.plugins()) {
+            method = plugin.onIndexMethod(this, method);
+            if (method == null) {
+                return;
+            }
+        }
+        methods.add(method);
     }
 
     public void addPermittedSubclass(String permittedSubclass) {

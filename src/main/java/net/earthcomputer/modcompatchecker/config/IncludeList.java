@@ -20,6 +20,15 @@ public final class IncludeList {
         return included;
     }
 
+    public boolean hasMatchingDirective(String file) {
+        for (Directive directive : directives) {
+            if (directive.pattern.matcher(file).matches()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     record Directive(DirectiveType type, Pattern pattern) {
     }
 

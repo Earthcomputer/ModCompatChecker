@@ -1,5 +1,7 @@
 package net.earthcomputer.modcompatchecker.indexer;
 
+import net.earthcomputer.modcompatchecker.config.Plugin;
+import net.earthcomputer.modcompatchecker.config.PluginLoader;
 import net.earthcomputer.modcompatchecker.util.AccessFlags;
 import net.earthcomputer.modcompatchecker.util.AsmUtil;
 import org.jetbrains.annotations.Nullable;
@@ -19,8 +21,15 @@ public final class Index {
     private final Map<String, ClassIndex> classes = new HashMap<>();
     private final Map<String, ClasspathClass> classpathClassCache = new ConcurrentHashMap<>();
 
+    @Nullable
     public ClassIndex addClass(String name, AccessFlags access, String superclass, List<String> interfaces) {
         ClassIndex classIndex = new ClassIndex(access, superclass, interfaces);
+        for (Plugin plugin : PluginLoader.plugins()) {
+            classIndex = plugin.onIndexClass(this, classIndex);
+            if (classIndex == null) {
+                return null;
+            }
+        }
         classes.put(name, classIndex);
         return classIndex;
     }
@@ -93,8 +102,17 @@ public final class Index {
 
             ClassIndex classIndex = new ClassIndex(access, superclass, interfaces);
 
-            classIndex.deserializeFrom(reader);
-            classes.put(key, classIndex);
+            for (Plugin plugin : PluginLoader.plugins()) {
+                classIndex = plugin.onIndexClass(this, classIndex);
+                if (classIndex == null) {
+                    break;
+                }
+            }
+
+            if (classIndex != null) {
+                classIndex.deserializeFrom(reader);
+                classes.put(key, classIndex);
+            }
         }
     }
 }
