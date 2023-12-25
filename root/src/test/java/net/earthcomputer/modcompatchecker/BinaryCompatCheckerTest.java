@@ -2,6 +2,7 @@ package net.earthcomputer.modcompatchecker;
 
 import net.earthcomputer.modcompatchecker.checker.BinaryCompatChecker;
 import net.earthcomputer.modcompatchecker.checker.Errors;
+import net.earthcomputer.modcompatchecker.config.Config;
 import net.earthcomputer.modcompatchecker.config.PluginLoader;
 import net.earthcomputer.modcompatchecker.indexer.Index;
 import net.earthcomputer.modcompatchecker.indexer.Indexer;
@@ -116,6 +117,7 @@ public class BinaryCompatCheckerTest {
     public static void destroyIndex() {
         index = null;
         PluginLoader.setTestingPlugins(null);
+        Config.unregisterAll();
     }
 
     @TestFactory

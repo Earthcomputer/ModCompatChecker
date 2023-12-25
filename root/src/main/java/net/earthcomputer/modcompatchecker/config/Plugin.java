@@ -35,25 +35,30 @@ public interface Plugin {
         return ThreeState.UNKNOWN;
     }
 
-    default void preIndexLibrary(Index index, Path libraryPath) throws IOException {
+    default void preIndexLibrary(Config config, Index index, Path libraryPath) throws IOException {
     }
 
-    default void preIndexMod(Index index, Path modPath) throws IOException {
+    default void preIndexMod(Config config, Index index, Path modPath) throws IOException {
     }
 
     @Nullable
-    default ClassIndex onIndexClass(Index index, ClassIndex clazz) {
+    default ClassIndex onIndexClass(Index index, String className, ClassIndex clazz) {
         return clazz;
     }
 
     @Nullable
-    default ClassMember onIndexField(ClassIndex clazz, ClassMember field) {
+    default ClassMember onIndexField(String className, ClassIndex clazz, ClassMember field) {
         return field;
     }
 
     @Nullable
-    default ClassMember onIndexMethod(ClassIndex clazz, ClassMember method) {
+    default ClassMember onIndexMethod(String className, ClassIndex clazz, ClassMember method) {
         return method;
+    }
+
+    @Nullable
+    default String onIndexPermittedSubclass(String className, ClassIndex clazz, String permittedSubclass) {
+        return permittedSubclass;
     }
 
     default void check(Index index, Config config, Path modPath, JarFile modJar, ProblemCollector problems, List<CompletableFuture<Void>> futures, Executor executor) throws IOException {

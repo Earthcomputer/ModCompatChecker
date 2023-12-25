@@ -12,6 +12,7 @@ import java.util.Arrays;
 
 public final class IndexerClassVisitor extends ClassVisitor {
     private final Index index;
+    private String className;
     @Nullable
     private ClassIndex classIndex;
 
@@ -22,13 +23,14 @@ public final class IndexerClassVisitor extends ClassVisitor {
 
     @Override
     public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+        className = name;
         classIndex = index.addClass(name, new AccessFlags(access), superName, new ArrayList<>(Arrays.asList(interfaces)));
     }
 
     @Override
     public FieldVisitor visitField(int access, String name, String descriptor, String signature, Object value) {
         if (classIndex != null) {
-            classIndex.addField(new AccessFlags(access), name, descriptor);
+            classIndex.addField(className, new AccessFlags(access), name, descriptor);
         }
         return null;
     }
@@ -36,7 +38,7 @@ public final class IndexerClassVisitor extends ClassVisitor {
     @Override
     public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
         if (classIndex != null) {
-            classIndex.addMethod(new AccessFlags(access), name, descriptor);
+            classIndex.addMethod(className, new AccessFlags(access), name, descriptor);
         }
         return null;
     }
@@ -44,7 +46,7 @@ public final class IndexerClassVisitor extends ClassVisitor {
     @Override
     public void visitPermittedSubclass(String permittedSubclass) {
         if (classIndex != null) {
-            classIndex.addPermittedSubclass(permittedSubclass);
+            classIndex.addPermittedSubclass(className, permittedSubclass);
         }
     }
 

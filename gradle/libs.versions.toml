@@ -6,6 +6,7 @@ junit = "5.9.1"
 asm = { module = "org.ow2.asm:asm", version.ref = "asm" }
 asmTree = { module = "org.ow2.asm:asm-tree", version.ref = "asm" }
 asmAnalysis = { module = "org.ow2.asm:asm-analysis", version.ref = "asm" }
+gson = "com.google.code.gson:gson:2.10.1"
 jetbrainsAnnotations = "org.jetbrains:annotations:24.1.0"
 joptSimple = "net.sf.jopt-simple:jopt-simple:5.0.4"
 junit = { module = "org.junit:junit-bom", version.ref = "junit" }

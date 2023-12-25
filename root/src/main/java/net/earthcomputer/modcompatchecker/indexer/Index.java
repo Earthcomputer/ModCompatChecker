@@ -25,7 +25,7 @@ public final class Index {
     public ClassIndex addClass(String name, AccessFlags access, String superclass, List<String> interfaces) {
         ClassIndex classIndex = new ClassIndex(access, superclass, interfaces);
         for (Plugin plugin : PluginLoader.plugins()) {
-            classIndex = plugin.onIndexClass(this, classIndex);
+            classIndex = plugin.onIndexClass(this, name, classIndex);
             if (classIndex == null) {
                 return null;
             }
@@ -103,14 +103,14 @@ public final class Index {
             ClassIndex classIndex = new ClassIndex(access, superclass, interfaces);
 
             for (Plugin plugin : PluginLoader.plugins()) {
-                classIndex = plugin.onIndexClass(this, classIndex);
+                classIndex = plugin.onIndexClass(this, key, classIndex);
                 if (classIndex == null) {
                     break;
                 }
             }
 
             if (classIndex != null) {
-                classIndex.deserializeFrom(reader);
+                classIndex.deserializeFrom(key, reader);
                 classes.put(key, classIndex);
             }
         }

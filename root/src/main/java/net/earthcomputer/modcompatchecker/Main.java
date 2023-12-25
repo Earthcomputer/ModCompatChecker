@@ -46,6 +46,8 @@ public final class Main {
             return;
         }
 
+        PluginLoader.plugins().forEach(Plugin::initialize);
+
         Config config;
         if (options.has(configOption)) {
             try (BufferedReader reader = Files.newBufferedReader(configOption.value(options))) {
@@ -58,10 +60,8 @@ public final class Main {
             config = Config.empty();
         }
 
-        PluginLoader.plugins().forEach(Plugin::initialize);
-
         if (options.has(indexOption)) {
-            indexJar(indexOption.value(options), outputOption.value(options));
+            indexJar(indexOption.value(options), outputOption.value(options), config);
             return;
         }
 
@@ -78,11 +78,11 @@ public final class Main {
         }
     }
 
-    private static void indexJar(Path jarPath, Path outputPath) {
+    private static void indexJar(Path jarPath, Path outputPath, Config config) {
         Index index = new Index();
         try {
             for (Plugin plugin : PluginLoader.plugins()) {
-                plugin.preIndexLibrary(index, jarPath);
+                plugin.preIndexLibrary(config, index, jarPath);
             }
             Indexer.indexJar(jarPath, index);
         } catch (IOException e) {
@@ -107,7 +107,7 @@ public final class Main {
             if (libraryPath.toString().endsWith(".jar")) {
                 for (Plugin plugin : PluginLoader.plugins()) {
                     try {
-                        plugin.preIndexLibrary(index, libraryPath);
+                        plugin.preIndexLibrary(config, index, libraryPath);
                     } catch (IOException e) {
                         System.err.println("Failed to index library: " + e);
                         return;
@@ -118,7 +118,7 @@ public final class Main {
         for (Path modPath : modPaths) {
             for (Plugin plugin : PluginLoader.plugins()) {
                 try {
-                    plugin.preIndexMod(index, modPath);
+                    plugin.preIndexMod(config, index, modPath);
                 } catch (IOException e) {
                     System.err.println("Failed to index mod jar: " + e);
                     return;

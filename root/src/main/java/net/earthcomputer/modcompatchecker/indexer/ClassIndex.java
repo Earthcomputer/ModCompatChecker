@@ -50,10 +50,10 @@ public final class ClassIndex implements IResolvedClass {
         return interfaces;
     }
 
-    public void addField(AccessFlags access, String name, String descriptor) {
+    public void addField(String className, AccessFlags access, String name, String descriptor) {
         ClassMember field = new ClassMember(access, name, descriptor);
         for (Plugin plugin : PluginLoader.plugins()) {
-            field = plugin.onIndexField(this, field);
+            field = plugin.onIndexField(className, this, field);
             if (field == null) {
                 return;
             }
@@ -61,10 +61,10 @@ public final class ClassIndex implements IResolvedClass {
         fields.add(field);
     }
 
-    public void addMethod(AccessFlags access, String name, String descriptor) {
+    public void addMethod(String className, AccessFlags access, String name, String descriptor) {
         ClassMember method = new ClassMember(access, name, descriptor);
         for (Plugin plugin : PluginLoader.plugins()) {
-            method = plugin.onIndexMethod(this, method);
+            method = plugin.onIndexMethod(className, this, method);
             if (method == null) {
                 return;
             }
@@ -72,7 +72,13 @@ public final class ClassIndex implements IResolvedClass {
         methods.add(method);
     }
 
-    public void addPermittedSubclass(String permittedSubclass) {
+    public void addPermittedSubclass(String className, String permittedSubclass) {
+        for (Plugin plugin : PluginLoader.plugins()) {
+            permittedSubclass = plugin.onIndexPermittedSubclass(className, this, permittedSubclass);
+            if (permittedSubclass == null) {
+                return;
+            }
+        }
         permittedSubclasses.add(permittedSubclass);
     }
 
@@ -128,7 +134,7 @@ public final class ClassIndex implements IResolvedClass {
         }
     }
 
-    public void deserializeFrom(BufferedReader reader) throws IOException {
+    public void deserializeFrom(String className, BufferedReader reader) throws IOException {
         while (true) {
             reader.mark(2);
             if (reader.read() != ' ') {
@@ -159,16 +165,16 @@ public final class ClassIndex implements IResolvedClass {
                     String descriptor = parts[3];
 
                     if ("field".equals(parts[0])) {
-                        addField(access, name, descriptor);
+                        addField(className, access, name, descriptor);
                     } else {
-                        addMethod(access, name, descriptor);
+                        addMethod(className, access, name, descriptor);
                     }
                 }
                 case "permits" -> {
                     if (parts.length < 2) {
                         throw new IOException("Invalid input line: Expected format - 'permits <subclass>'");
                     }
-                    addPermittedSubclass(parts[1]);
+                    addPermittedSubclass(className, parts[1]);
                 }
                 case "nestHost" -> {
                     if (parts.length < 2) {
