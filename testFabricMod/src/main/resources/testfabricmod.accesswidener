@@ -1,0 +1,10 @@
+accessWidener v2 intermediary
+
+accessible class testLib/ClassMadeInaccessible
+accessible method testLib/ClassMadeInaccessible <init> ()V
+accessible field testLib/SignatureChange fieldMadePrivate I
+accessible method testLib/SignatureChange staticMethodMadePrivate ()V
+extendable class testLib/ClassMadeFinal
+extendable class testLib/ClassMadeSealed
+extendable method testLib/MethodMadeFinal finalMethod ()V
+mutable field testLib/SignatureChange fieldMadeFinal I

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "testfabricmod",
+  "version": "1.0",
+
+  "entrypoints": {
+    "main": [
+      "testFabricMod.TestEntryPoint"
+    ]
+  },
+
+  "accessWidener": "testfabricmod.accesswidener"
+}

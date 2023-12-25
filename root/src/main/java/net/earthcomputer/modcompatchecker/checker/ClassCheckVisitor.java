@@ -15,14 +15,14 @@ import org.objectweb.asm.Type;
 
 public final class ClassCheckVisitor extends ClassVisitor {
     private final Index index;
-    private final ICheckerConfig config;
+    private final CheckerConfig config;
     private final ProblemCollector problems;
     private String superName;
     @Nullable
     private IResolvedClass superClass;
     private String className;
 
-    public ClassCheckVisitor(Index index, ICheckerConfig config, ProblemCollector problems) {
+    public ClassCheckVisitor(Index index, CheckerConfig config, ProblemCollector problems) {
         super(AsmUtil.API);
         this.index = index;
         this.config = config;

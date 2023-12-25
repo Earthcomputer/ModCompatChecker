@@ -26,7 +26,7 @@ public class BinaryCompatChecker implements Plugin {
 
     @Override
     public void check(Index index, Config config, Path modPath, JarFile modJar, ProblemCollector problems, List<CompletableFuture<Void>> futures, Executor executor) throws IOException {
-        ICheckerConfig checkerConfig = new CheckerConfig(config);
+        CheckerConfig checkerConfig = new CheckerConfig(config);
         Enumeration<JarEntry> entries = modJar.entries();
         while (entries.hasMoreElements()) {
             JarEntry entry = entries.nextElement();
@@ -37,7 +37,7 @@ public class BinaryCompatChecker implements Plugin {
     }
 
     @VisibleForTesting
-    public static void checkClass(Index index, ICheckerConfig config, JarFile jarFile, JarEntry entry, ProblemCollector problems) {
+    public static void checkClass(Index index, CheckerConfig config, JarFile jarFile, JarEntry entry, ProblemCollector problems) {
         ClassReader classReader;
         try {
             classReader = new ClassReader(jarFile.getInputStream(entry));

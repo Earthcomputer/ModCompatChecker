@@ -12,6 +12,7 @@ dependencies {
     implementation(libs.bundles.asm)
     testImplementation(platform(libs.junit))
     testImplementation(libs.junitPlatform)
+    testImplementation(project(":testCommon"))
 }
 
 tasks.test {
