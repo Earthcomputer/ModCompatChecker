@@ -8,6 +8,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -15,6 +18,7 @@ final class FabricModJson {
     private static final Gson GSON = new Gson();
 
     public int schemaVersion;
+    public Map<String, List<String>> entrypoints = Collections.emptyMap();
     @Nullable
     public String accessWidener;
 
